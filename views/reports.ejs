@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <title>Aylık Raporlar</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+</head>
+<body class="bg-light">
+
+    <nav class="navbar navbar-dark bg-dark mb-4">
+        <div class="container">
+            <a href="/dashboard" class="navbar-brand">🔙 Dashboard'a Dön</a>
+            <span class="navbar-text text-white"><%= username %></span>
+        </div>
+    </nav>
+
+    <div class="container">
+        <h2 class="text-center mb-4">📅 Aylık Finans Raporu</h2>
+
+        <div class="card shadow-sm p-4 mb-5">
+            <form action="/reports" method="GET" class="row g-3 justify-content-center align-items-end">
+                <div class="col-auto">
+                    <label class="form-label">Yıl</label>
+                    <input type="number" name="year" class="form-control" value="<%= year %>">
+                </div>
+                <div class="col-auto">
+                    <label class="form-label">Ay</label>
+                    <select name="month" class="form-select">
+                        <% for(let i=1; i<=12; i++) { %>
+                            <option value="<%= i %>" <%= i == month ? 'selected' : '' %>><%= i %>. Ay</option>
+                        <% } %>
+                    </select>
+                </div>
+                <div class="col-auto">
+                    <button type="submit" class="btn btn-primary">Raporu Getir</button>
+                </div>
+            </form>
+        </div>
+
+        <div class="row text-center">
+            <div class="col-md-4">
+                <div class="card border-success mb-3">
+                    <div class="card-header bg-success text-white">Toplam Gelir</div>
+                    <div class="card-body">
+                        <h3 class="text-success">+ <%= parseFloat(income).toFixed(2) %> ₺</h3>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="card border-danger mb-3">
+                    <div class="card-header bg-danger text-white">Toplam Gider</div>
+                    <div class="card-body">
+                        <h3 class="text-danger">- <%= parseFloat(expense).toFixed(2) %> ₺</h3>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="card border-info mb-3">
+                    <div class="card-header bg-info text-white">Net Durum</div>
+                    <div class="card-body">
+                        <% let net = income - expense; %>
+                        <h3 class="<%= net >= 0 ? 'text-success' : 'text-danger' %>">
+                            <%= net.toFixed(2) %> ₺
+                        </h3>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</body>
+</html>
