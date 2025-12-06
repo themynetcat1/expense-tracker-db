@@ -35,47 +35,85 @@ app.get('/', (req, res) => {
     res.render('index', { error: null });
 });
 
-// 2. Dashboard (Ana Ekran)
+// 2. Dashboard (Ana Ekran) - GÜNCELLENMİŞ VE CHART DESTEKLİ
 app.get('/dashboard', requireLogin, async (req, res) => {
     const userId = req.session.userId;
     try {
-        // A. Kategorileri Çek (Dropdown için)
+        // --- A. LİSTELER VE TABLOLAR ---
         const categories = await db.query('SELECT * FROM categories ORDER BY category_name');
         
-        // B. Son 5 Gider
         const expenses = await db.query(`
             SELECT e.*, c.category_name 
-            FROM expenses e 
-            JOIN categories c ON e.category_id = c.category_id 
+            FROM expenses e JOIN categories c ON e.category_id = c.category_id 
             WHERE e.user_id = $1 ORDER BY expense_date DESC, created_at DESC LIMIT 5`, [userId]);
 
-        // C. Son 5 Gelir
         const incomes = await db.query(`
             SELECT i.*, c.category_name 
-            FROM incomes i 
-            JOIN categories c ON i.category_id = c.category_id 
+            FROM incomes i JOIN categories c ON i.category_id = c.category_id 
             WHERE i.user_id = $1 ORDER BY income_date DESC, created_at DESC LIMIT 5`, [userId]);
 
-        // D. Bugünün Özeti (Trigger ile dolan tablodan)
-        // Not: Eğer bugünün kaydı yoksa 0 olarak gösterelim
         const summary = await db.query(`
-            SELECT total_income, total_expense 
-            FROM daily_summaries 
+            SELECT total_income, total_expense FROM daily_summaries 
             WHERE user_id = $1 AND date = CURRENT_DATE`, [userId]);
+        const dailyStats = summary.rows[0] || { total_income: 0, total_expense: 0 };
 
-        const dailyStats = summary.rows.length > 0 ? summary.rows[0] : { total_income: 0, total_expense: 0 };
 
+        // --- B. GRAFİK VERİLERİ (CHART DATA) ---
+
+        // 1. Pasta Grafik (Pie Chart): Kategori Bazlı Harcama
+        // Hangi kategoriye ne kadar harcadık?
+        const pieQuery = await db.query(`
+            SELECT c.category_name, SUM(e.amount) as total
+            FROM expenses e
+            JOIN categories c ON e.category_id = c.category_id
+            WHERE e.user_id = $1
+            GROUP BY c.category_name`, [userId]);
+
+        // 2. Çizgi Grafik (Line Chart): Son 7 Günlük Harcama
+        const lineQuery = await db.query(`
+            SELECT to_char(expense_date, 'YYYY-MM-DD') as day, SUM(amount) as daily_total
+            FROM expenses
+            WHERE user_id = $1 AND expense_date >= CURRENT_DATE - INTERVAL '7 days'
+            GROUP BY expense_date
+            ORDER BY expense_date ASC`, [userId]);
+
+        // 3. Sütun Grafik (Bar Chart): Bu Ay Gelir vs Gider
+        const barQuery = await db.query(`
+            SELECT 
+                (SELECT COALESCE(SUM(amount),0) FROM incomes WHERE user_id=$1 AND EXTRACT(MONTH FROM income_date) = EXTRACT(MONTH FROM CURRENT_DATE)) as income,
+                (SELECT COALESCE(SUM(amount),0) FROM expenses WHERE user_id=$1 AND EXTRACT(MONTH FROM expense_date) = EXTRACT(MONTH FROM CURRENT_DATE)) as expense
+        `, [userId]);
+
+
+        // --- C. VERİ PAKETLEME ---
+        // Veritabanından gelen ham veriyi, Chart.js'in anlayacağı basit listelere çeviriyoruz.
+        const chartData = {
+            // Pasta Grafik
+            pieLabels: pieQuery.rows.map(r => r.category_name),
+            pieValues: pieQuery.rows.map(r => parseFloat(r.total)),
+
+            // Çizgi Grafik
+            lineLabels: lineQuery.rows.map(r => r.day),
+            lineValues: lineQuery.rows.map(r => parseFloat(r.daily_total)),
+
+            // Sütun Grafik
+            barIncome: parseFloat(barQuery.rows[0].income),
+            barExpense: parseFloat(barQuery.rows[0].expense)
+        };
+
+        // Sayfayı Render Et (Tek Seferde)
         res.render('dashboard', {
             username: req.session.username,
             categories: categories.rows,
             expenses: expenses.rows,
             incomes: incomes.rows,
-            stats: dailyStats
+            stats: dailyStats,
+            chartData: chartData // Grafik verisini gönderiyoruz
         });
 
     } catch (err) {
         console.error("Dashboard Hatası:", err);
-        res.send("Bir hata oluştu.");
+        res.send("Bir hata oluştu: " + err.message);
     }
 });
 
@@ -189,6 +227,21 @@ app.get('/reports', requireLogin, async (req, res) => {
             income: 0, 
             expense: 0 
         });
+    }
+});
+// --- YENİ ROTA: KATEGORİ EKLEME ---
+app.post('/add-category', requireLogin, async (req, res) => {
+    const { category_name, category_type } = req.body; // Formdan gelen veriler
+    try {
+        // Yeni kategoriyi veritabanına ekle
+        await db.query(
+            'INSERT INTO categories (category_name, category_type) VALUES ($1, $2)',
+            [category_name, category_type]
+        );
+        res.redirect('/dashboard'); // İşlem bitince Dashboard'a dön
+    } catch (err) {
+        console.error("Kategori Ekleme Hatası:", err);
+        res.send("Kategori eklenirken hata oluştu.");
     }
 });
 

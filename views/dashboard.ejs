@@ -13,14 +13,18 @@
 <body class="bg-light">
 
     <nav class="navbar navbar-dark bg-dark mb-4">
-    <div class="container">
-        <span class="navbar-brand mb-0 h1">👋 Merhaba, <%= username %></span>
-        <div>
-            <a href="/reports" class="btn btn-warning btn-sm me-2">📊 Raporlar</a>
-            <a href="/logout" class="btn btn-outline-light btn-sm">Çıkış Yap</a>
+        <div class="container">
+            <span class="navbar-brand mb-0 h1">👋 Merhaba, <%= username %></span>
+            <div>
+                <button type="button" class="btn btn-primary btn-sm me-2" data-bs-toggle="modal" data-bs-target="#addCategoryModal">
+                    ➕ Kategori Ekle
+                </button>
+                
+                <a href="/reports" class="btn btn-warning btn-sm me-2">📊 Raporlar</a>
+                <a href="/logout" class="btn btn-outline-light btn-sm">Çıkış Yap</a>
+            </div>
         </div>
-    </div>
-</nav>
+    </nav>
 
     <div class="container">
         
@@ -38,6 +42,35 @@
                     <div class="card-body">
                         <h5 class="card-title text-muted">Bugünkü Toplam Gelir</h5>
                         <h2 class="text-success">+ ₺<%= parseFloat(stats.total_income).toFixed(2) %></h2>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="row mb-4">
+            
+            <div class="col-md-4">
+                <div class="card shadow-sm h-100">
+                    <div class="card-header bg-white fw-bold">Paran Nereye Gidiyor? 🍰</div>
+                    <div class="card-body">
+                        <canvas id="categoryChart"></canvas>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-md-4">
+                <div class="card shadow-sm h-100">
+                    <div class="card-header bg-white fw-bold">7 Günlük Harcama Trendi 📈</div>
+                    <div class="card-body">
+                        <canvas id="trendChart"></canvas>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-md-4">
+                <div class="card shadow-sm h-100">
+                    <div class="card-header bg-white fw-bold">Bu Ay: Gelir vs Gider 📊</div>
+                    <div class="card-body">
+                        <canvas id="cashflowChart"></canvas>
                     </div>
                 </div>
             </div>
@@ -92,6 +125,7 @@
             </div>
 
             <div class="col-md-6">
+                
                 <div class="card shadow mb-4">
                     <div class="card-header bg-success text-white">📈 Gelir Ekle</div>
                     <div class="card-body">
@@ -140,5 +174,107 @@
         </div>
     </div>
 
+<div class="modal fade" id="addCategoryModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Yeni Kategori Oluştur</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <form action="/add-category" method="POST">
+                        <div class="mb-3">
+                            <label class="form-label">Kategori Adı</label>
+                            <input type="text" name="category_name" class="form-control" placeholder="Örn: Tatil, Kira, Kedi..." required>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Bu kategori ne için?</label>
+                            <select name="category_type" class="form-select">
+                                <option value="EXPENSE">Gider (Harcama)</option>
+                                <option value="INCOME">Gelir (Kazanç)</option>
+                                <option value="BOTH">Her İkisi de</option>
+                            </select>
+                        </div>
+                        <div class="d-grid">
+                            <button type="submit" class="btn btn-primary">Kaydet</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+    <script>
+        // Server'dan gelen veriyi al
+        const data = <%- JSON.stringify(chartData) %>;
+
+        // 1. PASTA GRAFİK (Kategoriler)
+        const ctxPie = document.getElementById('categoryChart');
+        if (ctxPie) {
+            new Chart(ctxPie, {
+                type: 'pie', // 'pie' da yapabilirsin
+                data: {
+                    labels: data.pieLabels,
+                    datasets: [{
+                        data: data.pieValues,
+                        backgroundColor: [
+                            '#FF6384', '#36A2EB', '#FFCE56', '#4BC0C0', '#9966FF', '#FF9F40'
+                        ],
+                        hoverOffset: 4
+                    }]
+                },
+                options: { responsive: true }
+            });
+        }
+
+        // 2. ÇİZGİ GRAFİK (Trend)
+        const ctxLine = document.getElementById('trendChart');
+        if (ctxLine) {
+            new Chart(ctxLine, {
+                type: 'line',
+                data: {
+                    labels: data.lineLabels,
+                    datasets: [{
+                        label: 'Günlük Harcama',
+                        data: data.lineValues,
+                        borderColor: '#dc3545',
+                        backgroundColor: 'rgba(220, 53, 69, 0.2)',
+                        fill: true,
+                        tension: 0.3
+                    }]
+                },
+                options: { scales: { y: { beginAtZero: true } } }
+            });
+        }
+
+        // 3. SÜTUN GRAFİK (Gelir vs Gider)
+        const ctxBar = document.getElementById('cashflowChart');
+        if (ctxBar) {
+            new Chart(ctxBar, {
+                type: 'bar',
+                data: {
+                    labels: ['Bu Ay'],
+                    datasets: [
+                        {
+                            label: 'Gelir',
+                            data: [data.barIncome],
+                            backgroundColor: '#198754'
+                        },
+                        {
+                            label: 'Gider',
+                            data: [data.barExpense],
+                            backgroundColor: '#dc3545'
+                        }
+                    ]
+                },
+                options: { scales: { y: { beginAtZero: true } } }
+            });
+        }
+    </script>
+    
 </body>
 </html>
