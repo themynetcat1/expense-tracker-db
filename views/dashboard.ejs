@@ -47,30 +47,31 @@
             </div>
         </div>
         <div class="row mb-4">
-            
-            <div class="col-md-4">
-                <div class="card shadow-sm h-100">
-                    <div class="card-header bg-white fw-bold">Paran Nereye Gidiyor? 🍰</div>
-                    <div class="card-body">
-                        <canvas id="categoryChart"></canvas>
+            <div class="col-12">
+                <div class="card shadow-sm">
+                    <div class="card-header bg-white d-flex justify-content-between align-items-center">
+                        <span class="fw-bold">📊 Finansal Durum</span>
+                        
+                        <select id="chartSelector" class="form-select form-select-sm w-auto" onchange="changeChart()">
+                            <option value="pie">🍰 Kategori Dağılımı (Pasta)</option>
+                            <option value="line">📈 Harcama Trendi (Çizgi)</option>
+                            <option value="bar">💰 Gelir vs Gider (Sütun)</option>
+                            <option value="sankey">🌊 Para Akışı (Sankey)</option> </select>
+                        </select>
                     </div>
-                </div>
-            </div>
-
-            <div class="col-md-4">
-                <div class="card shadow-sm h-100">
-                    <div class="card-header bg-white fw-bold">7 Günlük Harcama Trendi 📈</div>
-                    <div class="card-body">
-                        <canvas id="trendChart"></canvas>
-                    </div>
-                </div>
-            </div>
-
-            <div class="col-md-4">
-                <div class="card shadow-sm h-100">
-                    <div class="card-header bg-white fw-bold">Bu Ay: Gelir vs Gider 📊</div>
-                    <div class="card-body">
-                        <canvas id="cashflowChart"></canvas>
+                    <div class="card-body" style="height: 400px; position: relative;">
+                        <div id="containerPie" class="h-100 w-100 d-flex justify-content-center">
+                            <canvas id="categoryChart"></canvas>
+                        </div>
+                        <div id="containerLine" class="h-100 w-100 d-none">
+                            <canvas id="trendChart"></canvas>
+                        </div>
+                        <div id="containerBar" class="h-100 w-100 d-none">
+                            <canvas id="cashflowChart"></canvas>
+                        </div>
+                        <div id="containerSankey" class="h-100 w-100 d-none">
+                            <canvas id="sankeyChart"></canvas>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -204,9 +205,9 @@
         </div>
     </div>
     
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chartjs-chart-sankey"></script>
 
     <script>
         // Server'dan gelen veriyi al
@@ -231,7 +232,7 @@
             });
         }
 
-        // 2. ÇİZGİ GRAFİK (Trend)
+        // 2. ÇİZGİ GRAFİK (BAKİYE AKIŞI - YEŞİL/KIRMIZI EFEKTLİ)
         const ctxLine = document.getElementById('trendChart');
         if (ctxLine) {
             new Chart(ctxLine, {
@@ -239,15 +240,42 @@
                 data: {
                     labels: data.lineLabels,
                     datasets: [{
-                        label: 'Günlük Harcama',
+                        label: 'Toplam Bakiye',
                         data: data.lineValues,
-                        borderColor: '#dc3545',
-                        backgroundColor: 'rgba(220, 53, 69, 0.2)',
                         fill: true,
-                        tension: 0.3
+                        tension: 0.4, // Çizgiyi yumuşatır
+                        // RENK SİHRİ BURADA BAŞLIYOR 👇
+                        segment: {
+                            borderColor: ctx => {
+                                // Eğer bir sonraki nokta daha yukarıdaysa (p1 > p0) YEŞİL, değilse KIRMIZI
+                                // (Chart.js'de Y ekseni yukarı doğru artar, p1.parsed.y değeri büyükse yukarıdadır)
+                                return ctx.p0.parsed.y < ctx.p1.parsed.y ? '#198754' : '#dc3545';
+                            },
+                            backgroundColor: ctx => {
+                                // Altındaki alanın rengi de hafifçe değişsin
+                                return ctx.p0.parsed.y < ctx.p1.parsed.y ? 'rgba(25, 135, 84, 0.1)' : 'rgba(220, 53, 69, 0.1)';
+                            }
+                        },
+                        pointBackgroundColor: '#fff',
+                        pointBorderColor: '#000',
+                        borderWidth: 3
                     }]
                 },
-                options: { scales: { y: { beginAtZero: true } } }
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: { y: { beginAtZero: true } },
+                    plugins: {
+                        legend: { display: false }, // Tek çizgi olduğu için etikete gerek yok
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    return 'Bakiye: ₺' + context.parsed.y.toFixed(2);
+                                }
+                            }
+                        }
+                    }
+                }
             });
         }
 
@@ -273,6 +301,53 @@
                 },
                 options: { scales: { y: { beginAtZero: true } } }
             });
+        }
+        // ... (Mevcut grafik kodlarının altına ekle) ...
+
+        // 4. SANKEY CHART (Para Akışı)
+        const ctxSankey = document.getElementById('sankeyChart');
+        if (ctxSankey && data.sankey.length > 0) {
+            new Chart(ctxSankey, {
+                type: 'sankey',
+                data: {
+                    datasets: [{
+                        label: 'Para Akışı',
+                        data: data.sankey, // Server'dan gelen veri
+                        colorFrom: (c) => c.dataset.data[c.dataIndex].to === 'Cüzdan 💰' ? '#198754' : '#6c757d', // Gelirler Yeşil
+                        colorTo: (c) => c.dataset.data[c.dataIndex].from === 'Cüzdan 💰' ? '#dc3545' : '#6c757d', // Giderler Kırmızı
+                        colorMode: 'gradient', // Renk geçişli olsun
+                        size: 'max', // Genişlik ayarı
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false
+                }
+            });
+        }
+
+        // GRAFİK DEĞİŞTİRME FONKSİYONU (GÜNCELLENDİ)
+        function changeChart() {
+            const selected = document.getElementById('chartSelector').value;
+            
+            // Hepsini gizle
+            document.getElementById('containerPie').classList.add('d-none');
+            document.getElementById('containerLine').classList.add('d-none');
+            document.getElementById('containerBar').classList.add('d-none');
+            document.getElementById('containerSankey').classList.add('d-none'); // Yeni
+            document.getElementById('containerPie').classList.remove('d-flex');
+
+            // Seçileni aç
+            if (selected === 'pie') {
+                document.getElementById('containerPie').classList.remove('d-none');
+                document.getElementById('containerPie').classList.add('d-flex');
+            } else if (selected === 'line') {
+                document.getElementById('containerLine').classList.remove('d-none');
+            } else if (selected === 'bar') {
+                document.getElementById('containerBar').classList.remove('d-none');
+            } else if (selected === 'sankey') { // Yeni
+                document.getElementById('containerSankey').classList.remove('d-none');
+            }
         }
     </script>
     

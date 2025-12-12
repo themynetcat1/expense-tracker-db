@@ -67,5 +67,144 @@
             </div>
         </div>
     </div>
+<hr class="my-5">
+
+        <h3 class="text-center mb-4">📈 Detaylı Grafik Analizleri</h3>
+        
+        <div class="row mb-5">
+            <div class="col-md-4">
+                <div class="card shadow-sm h-100">
+                    <div class="card-header bg-white fw-bold text-center">Kategori Dağılımı</div>
+                    <div class="card-body">
+                        <div style="height: 300px; position: relative;">
+                            <canvas id="repPie"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-md-4">
+                <div class="card shadow-sm h-100">
+                    <div class="card-header bg-white fw-bold text-center">30 Günlük Trend</div>
+                    <div class="card-body">
+                        <div style="height: 300px; position: relative;">
+                            <canvas id="repLine"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+
+            <div class="col-md-4">
+                <div class="card shadow-sm h-100">
+                    <div class="card-header bg-white fw-bold text-center">Bu Ayın Dengesi</div>
+                    <div class="card-body">
+                        <div style="height: 300px; position: relative;">
+                            <canvas id="repBar"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="row mb-5">
+            <div class="col-12">
+                <div class="card shadow-sm h-100">
+                    <div class="card-header bg-white fw-bold text-center">Para Akış Diyagramı (Sankey) 🌊</div>
+                    <div class="card-body">
+                        <div style="height: 400px; position: relative;">
+                            <canvas id="repSankey"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        </div>
+    </div> 
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-chart-sankey"></script>
+    <script>
+        
+        const d = <%- JSON.stringify(chartData) %>;
+
+        // Ortak Ayarlar (Boyutlandırma için)
+        const commonOptions = {
+            responsive: true,
+            maintainAspectRatio: false, // Kutunun boyutuna uymasını sağlar
+            plugins: {
+                legend: { position: 'bottom' } // Etiketleri alta alır, yer açar
+            }
+        };
+
+        if(d) {
+            // 1. Pasta
+            new Chart(document.getElementById('repPie'), {
+                type: 'pie',
+                data: {
+                    labels: d.pieLabels,
+                    datasets: [{ 
+                        data: d.pieValues, 
+                        backgroundColor: ['#FF6384', '#36A2EB', '#FFCE56', '#4BC0C0', '#9966FF'], 
+                        hoverOffset: 4 
+                    }]
+                },
+                options: commonOptions
+            });
+
+            // 2. Çizgi (Raporlar - Bakiye Akışı)
+            new Chart(document.getElementById('repLine'), {
+                type: 'line',
+                data: {
+                    labels: d.lineLabels,
+                    datasets: [{
+                        label: 'Bakiye Değişimi',
+                        data: d.lineValues,
+                        fill: true,
+                        tension: 0.4,
+                        segment: {
+                            borderColor: ctx => ctx.p0.parsed.y < ctx.p1.parsed.y ? '#198754' : '#dc3545',
+                            backgroundColor: ctx => ctx.p0.parsed.y < ctx.p1.parsed.y ? 'rgba(25, 135, 84, 0.1)' : 'rgba(220, 53, 69, 0.1)'
+                        },
+                        borderWidth: 3
+                    }]
+                },
+                options: {
+                    ...commonOptions,
+                    scales: { y: { beginAtZero: true } }
+                }
+            });
+
+            // 3. Sütun
+            new Chart(document.getElementById('repBar'), {
+                type: 'bar',
+                data: {
+                    labels: ['Seçilen Ay'],
+                    datasets: [
+                        { label: 'Gelir', data: [d.barIncome], backgroundColor: '#198754' },
+                        { label: 'Gider', data: [d.barExpense], backgroundColor: '#dc3545' }
+                    ]
+                },
+                options: {
+                    ...commonOptions,
+                    scales: { y: { beginAtZero: true } }
+                }
+            });
+            // 4. SANKEY (YENİ)
+            if (d.sankey && d.sankey.length > 0) {
+                new Chart(document.getElementById('repSankey'), {
+                    type: 'sankey',
+                    data: {
+                        datasets: [{
+                            label: 'Para Akışı',
+                            data: d.sankey,
+                            colorFrom: (c) => c.dataset.data[c.dataIndex].to === 'Cüzdan 💰' ? '#198754' : '#6c757d',
+                            colorTo: (c) => c.dataset.data[c.dataIndex].from === 'Cüzdan 💰' ? '#dc3545' : '#6c757d',
+                            colorMode: 'gradient',
+                            size: 'max'
+                        }]
+                    },
+                    options: commonOptions
+                });
+            }
+        }
+    </script>
 </body>
 </html>

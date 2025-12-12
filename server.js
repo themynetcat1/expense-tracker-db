@@ -69,13 +69,27 @@ app.get('/dashboard', requireLogin, async (req, res) => {
             WHERE e.user_id = $1
             GROUP BY c.category_name`, [userId]);
 
-        // 2. Çizgi Grafik (Line Chart): Son 7 Günlük Harcama
+        // B. Çizgi Grafik (GÜNCELLENDİ: Bakiye Akışı - Tek Çizgi)
+        // 1. Günlük Net Değişimi Çekiyoruz (Gelir - Gider)
         const lineQuery = await db.query(`
-            SELECT to_char(expense_date, 'YYYY-MM-DD') as day, SUM(amount) as daily_total
-            FROM expenses
-            WHERE user_id = $1 AND expense_date >= CURRENT_DATE - INTERVAL '7 days'
-            GROUP BY expense_date
-            ORDER BY expense_date ASC`, [userId]);
+            SELECT 
+                to_char(date_column, 'YYYY-MM-DD') as day, 
+                SUM(inc) - SUM(exp) as daily_net_change
+            FROM (
+                SELECT income_date as date_column, amount as inc, 0 as exp FROM incomes WHERE user_id = $1
+                UNION ALL
+                SELECT expense_date as date_column, 0 as inc, amount as exp FROM expenses WHERE user_id = $1
+            ) as combined
+            WHERE date_column >= CURRENT_DATE - INTERVAL '30 days'
+            GROUP BY date_column
+            ORDER BY date_column ASC`, [userId]);
+
+        // 2. Kümülatif Hesap (Bakiyeyi üstüne koya koya git)
+        let currentBalance = 0;
+        const balanceData = lineQuery.rows.map(r => {
+            currentBalance += parseFloat(r.daily_net_change);
+            return currentBalance;
+        });
 
         // 3. Sütun Grafik (Bar Chart): Bu Ay Gelir vs Gider
         const barQuery = await db.query(`
@@ -83,23 +97,61 @@ app.get('/dashboard', requireLogin, async (req, res) => {
                 (SELECT COALESCE(SUM(amount),0) FROM incomes WHERE user_id=$1 AND EXTRACT(MONTH FROM income_date) = EXTRACT(MONTH FROM CURRENT_DATE)) as income,
                 (SELECT COALESCE(SUM(amount),0) FROM expenses WHERE user_id=$1 AND EXTRACT(MONTH FROM expense_date) = EXTRACT(MONTH FROM CURRENT_DATE)) as expense
         `, [userId]);
+// ... (Üstteki pieQuery, lineQuery, barQuery sorguları aynen kalsın) ...
 
+        // --- D. SANKEY CHART VERİSİ (YENİ EKLENDİ) ---
+        // 1. Gelirlerin Akışı (Gelir Kategorisi -> 'Cüzdan')
+        const incomeFlowQuery = await db.query(`
+            SELECT c.category_name, SUM(i.amount) as total
+            FROM incomes i
+            JOIN categories c ON i.category_id = c.category_id
+            WHERE i.user_id = $1
+            GROUP BY c.category_name`, [userId]);
 
-        // --- C. VERİ PAKETLEME ---
-        // Veritabanından gelen ham veriyi, Chart.js'in anlayacağı basit listelere çeviriyoruz.
+        // 2. Giderlerin Akışı ('Cüzdan' -> Gider Kategorisi)
+        const expenseFlowQuery = await db.query(`
+            SELECT c.category_name, SUM(e.amount) as total
+            FROM expenses e
+            JOIN categories c ON e.category_id = c.category_id
+            WHERE e.user_id = $1
+            GROUP BY c.category_name`, [userId]);
+
+        // 3. Veriyi Sankey Formatına Çevir: { from: '...', to: '...', flow: 100 }
+        let sankeyData = [];
+
+        // Gelirleri ekle
+        incomeFlowQuery.rows.forEach(r => {
+            sankeyData.push({ 
+                from: r.category_name, 
+                to: 'Cüzdan 💰', 
+                flow: parseFloat(r.total) 
+            });
+        });
+
+        // Giderleri ekle
+        expenseFlowQuery.rows.forEach(r => {
+            sankeyData.push({ 
+                from: 'Cüzdan 💰', 
+                to: r.category_name, 
+                flow: parseFloat(r.total) 
+            });
+        });
+
+        // D. VERİ PAKETLEME (Tek Çizgi Haline Getirdik)
         const chartData = {
-            // Pasta Grafik
             pieLabels: pieQuery.rows.map(r => r.category_name),
             pieValues: pieQuery.rows.map(r => parseFloat(r.total)),
-
-            // Çizgi Grafik
+            
             lineLabels: lineQuery.rows.map(r => r.day),
-            lineValues: lineQuery.rows.map(r => parseFloat(r.daily_total)),
-
-            // Sütun Grafik
+            lineValues: balanceData, // <--- ARTIK SADECE BAKİYE VAR (Eski lineIncome/lineExpense gitti)
+            
             barIncome: parseFloat(barQuery.rows[0].income),
-            barExpense: parseFloat(barQuery.rows[0].expense)
+            barExpense: parseFloat(barQuery.rows[0].expense),
+            
+            sankey: typeof sankeyData !== 'undefined' ? sankeyData : [] 
         };
+
+        // ... res.render kısmı aynı kalsın ...
 
         // Sayfayı Render Et (Tek Seferde)
         res.render('dashboard', {
@@ -187,45 +239,121 @@ app.get('/logout', (req, res) => {
     res.redirect('/');
 });
 
-// --- YENİ ROTA: AYLIK RAPOR SAYFASI ---
+// --- RAPOR ROTASI (DÜZELTİLMİŞ: HER ŞEY SEÇİLEN AYA GÖRE) ---
 app.get('/reports', requireLogin, async (req, res) => {
     const userId = req.session.userId;
-    // Eğer tarih seçilmediyse bugünün ayını ve yılını al
     const currentYear = new Date().getFullYear();
-    const currentMonth = new Date().getMonth() + 1; // JS'de aylar 0'dan başlar
+    const currentMonth = new Date().getMonth() + 1;
 
-    const selectedYear = req.query.year || currentYear;
-    const selectedMonth = req.query.month || currentMonth;
+    const selectedYear = parseInt(req.query.year) || currentYear;
+    const selectedMonth = parseInt(req.query.month) || currentMonth;
 
     try {
-        // Stored Procedure Çağırılıyor (PostgreSQL'e özel CALL komutu)
-        // Sonuç tek satır döner: { p_total_income, p_total_expense }
+        // 1. Tablo Verisi (Stored Procedure)
         const result = await db.query(
             `CALL get_monthly_report($1, $2, $3, 0, 0)`, 
             [userId, selectedMonth, selectedYear]
         );
-        
-        // Procedure sonuçları bazen farklı formatta dönebilir, pg kütüphanesinde
-        // CALL işlemi sonucunda rows genellikle ilk satırda veriyi döndürür.
         const report = result.rows[0] || { p_total_income: 0, p_total_expense: 0 };
+
+        // 2. GRAFİK VERİLERİ (HEPSİ SEÇİLEN AYA GÖRE AYARLANDI)
+        
+        // A. Pasta Grafik (Seçilen Ay)
+        const pieQuery = await db.query(`
+            SELECT c.category_name, COALESCE(SUM(e.amount), 0) as total
+            FROM expenses e JOIN categories c ON e.category_id = c.category_id
+            WHERE e.user_id = $1 
+              AND EXTRACT(MONTH FROM expense_date) = $2 
+              AND EXTRACT(YEAR FROM expense_date) = $3
+            GROUP BY c.category_name`, [userId, selectedMonth, selectedYear]);
+
+        // B. Çizgi Grafik (Seçilen Ayın Bakiye Akışı)
+        const lineQuery = await db.query(`
+            SELECT 
+                to_char(date_column, 'YYYY-MM-DD') as day, 
+                SUM(inc) - SUM(exp) as daily_net_change
+            FROM (
+                SELECT income_date as date_column, amount as inc, 0 as exp FROM incomes WHERE user_id = $1
+                UNION ALL
+                SELECT expense_date as date_column, 0 as inc, amount as exp FROM expenses WHERE user_id = $1
+            ) as combined
+            WHERE EXTRACT(MONTH FROM date_column) = $2 
+              AND EXTRACT(YEAR FROM date_column) = $3
+            GROUP BY date_column 
+            ORDER BY date_column ASC`, [userId, selectedMonth, selectedYear]);
+
+        // Kümülatif Hesap (O ay içindeki değişim)
+        let currentBalance = 0;
+        const balanceData = lineQuery.rows.map(r => {
+            currentBalance += parseFloat(r.daily_net_change);
+            return currentBalance;
+        });
+
+        // C. Sütun Grafik (Seçilen Ay)
+        const barQuery = await db.query(`
+            SELECT 
+                (SELECT COALESCE(SUM(amount),0) FROM incomes WHERE user_id=$1 AND EXTRACT(MONTH FROM income_date) = $2 AND EXTRACT(YEAR FROM income_date) = $3) as income,
+                (SELECT COALESCE(SUM(amount),0) FROM expenses WHERE user_id=$1 AND EXTRACT(MONTH FROM expense_date) = $2 AND EXTRACT(YEAR FROM expense_date) = $3) as expense
+        `, [userId, selectedMonth, selectedYear]);
+
+        // D. SANKEY CHART (Seçilen Ay)
+        // Gelir Akışı
+        const incomeFlowQuery = await db.query(`
+            SELECT c.category_name, SUM(i.amount) as total
+            FROM incomes i JOIN categories c ON i.category_id = c.category_id
+            WHERE i.user_id = $1 
+              AND EXTRACT(MONTH FROM income_date) = $2 
+              AND EXTRACT(YEAR FROM income_date) = $3
+            GROUP BY c.category_name`, [userId, selectedMonth, selectedYear]);
+
+        // Gider Akışı
+        const expenseFlowQuery = await db.query(`
+            SELECT c.category_name, SUM(e.amount) as total
+            FROM expenses e JOIN categories c ON e.category_id = c.category_id
+            WHERE e.user_id = $1 
+              AND EXTRACT(MONTH FROM expense_date) = $2 
+              AND EXTRACT(YEAR FROM expense_date) = $3
+            GROUP BY c.category_name`, [userId, selectedMonth, selectedYear]);
+
+        // Sankey Verisini Hazırla
+        let sankeyData = [];
+        incomeFlowQuery.rows.forEach(r => {
+            sankeyData.push({ from: r.category_name, to: 'Cüzdan 💰', flow: parseFloat(r.total) });
+        });
+        expenseFlowQuery.rows.forEach(r => {
+            sankeyData.push({ from: 'Cüzdan 💰', to: r.category_name, flow: parseFloat(r.total) });
+        });
+
+        // Veri Paketleme
+        const chartData = {
+            pieLabels: pieQuery.rows.map(r => r.category_name),
+            pieValues: pieQuery.rows.map(r => parseFloat(r.total)),
+            
+            lineLabels: lineQuery.rows.map(r => r.day),
+            lineValues: balanceData, // Tek Çizgi (Bakiye)
+            
+            barIncome: parseFloat(barQuery.rows[0].income),
+            barExpense: parseFloat(barQuery.rows[0].expense),
+            
+            sankey: sankeyData
+        };
 
         res.render('reports', {
             username: req.session.username,
             year: selectedYear,
             month: selectedMonth,
-            income: report.p_total_income,
-            expense: report.p_total_expense
+            income: parseFloat(report.p_total_income), 
+            expense: parseFloat(report.p_total_expense),
+            chartData: chartData
         });
 
     } catch (err) {
         console.error("Rapor Hatası:", err);
-        // Hata olsa bile sayfayı boş verilerle açalım ki çökmesin
         res.render('reports', {
             username: req.session.username,
             year: selectedYear,
             month: selectedMonth,
-            income: 0, 
-            expense: 0 
+            income: 0, expense: 0, chartData: null
         });
     }
 });
