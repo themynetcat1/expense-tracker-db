@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Edit Expense</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+</head>
+<body class="bg-light">
+
+<nav class="navbar navbar-dark bg-dark mb-4">
+    <div class="container">
+        <span class="navbar-brand mb-0 h1">✏️ Edit Expense & Convert</span>
+        <a href="/dashboard" class="btn btn-outline-light btn-sm">🔙 Cancel</a>
+    </div>
+</nav>
+
+<div class="container">
+    <div class="row justify-content-center">
+        <div class="col-md-8">
+            <form action="/update-expense/<%= expense.expense_id %>" method="POST">
+                
+                <div class="card shadow-sm mb-4">
+                    <div class="card-header bg-primary text-white">📝 Basic Information</div>
+                    <div class="card-body">
+                        <div class="row mb-3">
+                            <div class="col-md-6">
+                                <label class="form-label">Amount ($)</label>
+                                <input type="number" step="0.01" name="amount" class="form-control" value="<%= expense.amount %>" required>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">Date</label>
+                                <input type="date" name="date" class="form-control" 
+                                       value="<%= new Date(expense.expense_date).toISOString().split('T')[0] %>" required>
+                            </div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label">Category</label>
+                            <select name="category_id" class="form-select">
+                                <% categories.forEach(cat => { %>
+                                    <% if(cat.category_type !== 'INCOME') { %>
+                                        <option value="<%= cat.category_id %>" <%= cat.category_id === expense.category_id ? 'selected' : '' %>>
+                                            <%= cat.category_name %>
+                                        </option>
+                                    <% } %>
+                                <% }) %>
+                            </select>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label">Description</label>
+                            <input type="text" name="description" class="form-control" value="<%= expense.description %>">
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card shadow-sm mb-4 border-warning">
+                    <div class="card-header bg-warning text-dark d-flex justify-content-between align-items-center">
+                        <span>⚙️ Convert to Sub-systems</span>
+                        <small>Select only one</small>
+                    </div>
+                    <div class="card-body">
+                        
+                        <div class="form-check form-switch mb-3">
+                            <input class="form-check-input" type="checkbox" id="subCheck" name="is_subscription" value="true" onchange="toggleOptions('sub')">
+                            <label class="form-check-label fw-bold" for="subCheck">Mark as Subscription</label>
+                            <small class="text-muted d-block">For recurring payments like Netflix, Spotify, Rent.</small>
+                        </div>
+
+                        <div id="subOptions" class="p-3 bg-light rounded border mb-3" style="display: none;">
+                            <label class="form-label">Billing Cycle</label>
+                            <select name="sub_cycle" class="form-select mb-2">
+                                <option value="MONTHLY">Monthly</option>
+                                <option value="YEARLY">Yearly</option>
+                            </select>
+                            <div class="alert alert-info py-2 small">
+                                ℹ️ The system will remind you when the next payment date arrives.
+                            </div>
+                        </div>
+
+                        <hr>
+
+                        <div class="form-check form-switch mb-3">
+                            <input class="form-check-input" type="checkbox" id="instCheck" name="is_installment" value="true" onchange="toggleOptions('inst')">
+                            <label class="form-check-label fw-bold" for="instCheck">Mark as Installment</label>
+                            <small class="text-muted d-block">For installments like Phone, Computer etc.</small>
+                        </div>
+
+                        <div id="instOptions" class="p-3 bg-light rounded border" style="display: none;">
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <label class="form-label">Total Installments</label>
+                                    <input type="number" name="total_installments" class="form-control" placeholder="e.g. 6">
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label">Current Installment #</label>
+                                    <input type="number" name="current_installment" class="form-control" value="1">
+                                </div>
+                            </div>
+                            <div class="alert alert-warning py-2 small mt-2">
+                                ℹ️ Remaining installments will be calculated automatically.
+                            </div>
+                        </div>
+
+                    </div>
+                </div>
+
+                <div class="d-grid gap-2 d-md-flex justify-content-md-end">
+                    <button type="submit" class="btn btn-success px-4">Save Changes</button>
+                </div>
+
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+    function toggleOptions(type) {
+        const subCheck = document.getElementById('subCheck');
+        const instCheck = document.getElementById('instCheck');
+        const subDiv = document.getElementById('subOptions');
+        const instDiv = document.getElementById('instOptions');
+
+        if (type === 'sub') {
+            if (subCheck.checked) {
+                subDiv.style.display = 'block';
+                instCheck.checked = false;
+                instDiv.style.display = 'none';
+            } else {
+                subDiv.style.display = 'none';
+            }
+        } else if (type === 'inst') {
+            if (instCheck.checked) {
+                instDiv.style.display = 'block';
+                subCheck.checked = false;
+                subDiv.style.display = 'none';
+            } else {
+                instDiv.style.display = 'none';
+            }
+        }
+    }
+</script>
+
+</body>
+</html>

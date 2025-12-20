@@ -1,8 +1,8 @@
 <!DOCTYPE html>
-<html lang="tr">
+<html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Panel | Finans Takip</title>
+    <title>Dashboard | Finance Tracker</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <style>
         .card-header { font-weight: bold; }
@@ -14,34 +14,32 @@
 
     <nav class="navbar navbar-dark bg-dark mb-4">
         <div class="container">
-            <span class="navbar-brand mb-0 h1">👋 Merhaba, <%= username %></span>
+            <span class="navbar-brand mb-0 h1">👋 Hello, <%= username %></span>
             <div>
                 <button type="button" class="btn btn-primary btn-sm me-2" data-bs-toggle="modal" data-bs-target="#addCategoryModal">
-                    ➕ Kategori Ekle
+                    ➕ Add Category
                 </button>
-                
-                <a href="/reports" class="btn btn-warning btn-sm me-2">📊 Raporlar</a>
-                <a href="/logout" class="btn btn-outline-light btn-sm">Çıkış Yap</a>
+                <a href="/reports" class="btn btn-warning btn-sm me-2">📊 Reports</a>
+                <a href="/logout" class="btn btn-outline-light btn-sm">Logout</a>
             </div>
         </div>
     </nav>
 
     <div class="container">
-        
         <div class="row mb-4 text-center">
             <div class="col-md-6">
                 <div class="card shadow-sm border-danger">
                     <div class="card-body">
-                        <h5 class="card-title text-muted">Bugünkü Toplam Gider</h5>
-                        <h2 class="text-danger">- ₺<%= parseFloat(stats.total_expense).toFixed(2) %></h2>
+                        <h5 class="card-title text-muted">Total Expense Today</h5>
+                        <h2 class="text-danger">- $<%= parseFloat(stats.total_expense).toFixed(2) %></h2>
                     </div>
                 </div>
             </div>
             <div class="col-md-6">
                 <div class="card shadow-sm border-success">
                     <div class="card-body">
-                        <h5 class="card-title text-muted">Bugünkü Toplam Gelir</h5>
-                        <h2 class="text-success">+ ₺<%= parseFloat(stats.total_income).toFixed(2) %></h2>
+                        <h5 class="card-title text-muted">Total Income Today</h5>
+                        <h2 class="text-success">+ $<%= parseFloat(stats.total_income).toFixed(2) %></h2>
                     </div>
                 </div>
             </div>
@@ -50,13 +48,12 @@
             <div class="col-12">
                 <div class="card shadow-sm">
                     <div class="card-header bg-white d-flex justify-content-between align-items-center">
-                        <span class="fw-bold">📊 Finansal Durum</span>
-                        
+                        <span class="fw-bold">📊 Financial Status</span>
                         <select id="chartSelector" class="form-select form-select-sm w-auto" onchange="changeChart()">
-                            <option value="pie">🍰 Kategori Dağılımı (Pasta)</option>
-                            <option value="line">📈 Harcama Trendi (Çizgi)</option>
-                            <option value="bar">💰 Gelir vs Gider (Sütun)</option>
-                            <option value="sankey">🌊 Para Akışı (Sankey)</option> </select>
+                            <option value="pie">🍰 Category Distribution (Pie)</option>
+                            <option value="line">📈 Spending Trend (Line)</option>
+                            <option value="bar">💰 Income vs Expense (Bar)</option>
+                            <option value="sankey">🌊 Cash Flow (Sankey)</option>
                         </select>
                     </div>
                     <div class="card-body" style="height: 400px; position: relative;">
@@ -78,15 +75,14 @@
         </div>
 
         <div class="row">
-            
             <div class="col-md-6">
                 <div class="card shadow mb-4">
-                    <div class="card-header bg-danger text-white">📉 Gider Ekle</div>
+                    <div class="card-header bg-danger text-white">📉 Add Expense</div>
                     <div class="card-body">
                         <form action="/add-expense" method="POST">
                             <div class="row mb-2">
                                 <div class="col">
-                                    <input type="number" step="0.01" name="amount" class="form-control" placeholder="Tutar (TL)" required>
+                                    <input type="number" step="0.01" name="amount" class="form-control" placeholder="Amount ($)" required>
                                 </div>
                                 <div class="col">
                                     <input type="date" name="date" class="form-control" value="<%= new Date().toISOString().split('T')[0] %>" required>
@@ -94,7 +90,7 @@
                             </div>
                             <div class="mb-2">
                                 <select name="category_id" class="form-select">
-                                    <% categories.forEach(cat => { %>
+                                    <% categories.forEach(cat=> { %>
                                         <% if(cat.category_type !== 'INCOME') { %>
                                             <option value="<%= cat.category_id %>"><%= cat.category_name %></option>
                                         <% } %>
@@ -102,38 +98,48 @@
                                 </select>
                             </div>
                             <div class="mb-2">
-                                <input type="text" name="description" class="form-control" placeholder="Açıklama (Opsiyonel)">
+                                <input type="text" name="description" class="form-control" placeholder="Description (Optional)">
                             </div>
-                            <button type="submit" class="btn btn-danger w-100">Gider Kaydet</button>
+                            <button type="submit" class="btn btn-danger w-100">Save Expense</button>
                         </form>
                     </div>
                 </div>
 
-                <h6 class="text-muted">Son Harcamalar</h6>
+                <h6 class="text-muted">Recent Expenses</h6>
                 <ul class="list-group mb-4">
-                    <% expenses.forEach(item => { %>
+                    <% expenses.forEach(item=> { %>
                         <li class="list-group-item d-flex justify-content-between align-items-center">
                             <div>
-                                <strong><%= item.category_name %></strong> <small class="text-muted">(<%= item.description %>)</small>
+                                <strong><%= item.category_name %></strong>
+                                <small class="text-muted">(<%= item.description %>)</small>
                                 <br>
-                                <small class="text-secondary"><%= new Date(item.expense_date).toLocaleDateString('tr-TR') %></small>
+                                <small class="text-secondary"><%= new Date(item.expense_date).toLocaleDateString('en-US') %></small>
                             </div>
-                            <span class="badge bg-danger rounded-pill">- ₺<%= parseFloat(item.amount).toFixed(2) %></span>
+                            <div class="d-flex align-items-center">
+                                <span class="badge bg-danger rounded-pill me-3">- $<%= parseFloat(item.amount).toFixed(2) %></span>
+                                <div class="btn-group" role="group">
+                                    <a href="/edit-expense/<%= item.expense_id %>" class="btn btn-sm btn-outline-primary">✏️</a>
+                                    <form action="/delete-expense/<%= item.expense_id %>" method="POST" style="display:inline;">
+                                        <button type="submit" class="btn btn-sm btn-outline-danger" onclick="return confirm('Are you sure you want to delete this expense?')">🗑️</button>
+                                    </form>
+                                </div>
+                            </div>
                         </li>
                     <% }) %>
-                    <% if(expenses.length === 0) { %> <li class="list-group-item text-center text-muted">Henüz kayıt yok.</li> <% } %>
+                    <% if(expenses.length===0) { %>
+                        <li class="list-group-item text-center text-muted">No records yet.</li>
+                    <% } %>
                 </ul>
             </div>
 
             <div class="col-md-6">
-                
                 <div class="card shadow mb-4">
-                    <div class="card-header bg-success text-white">📈 Gelir Ekle</div>
+                    <div class="card-header bg-success text-white">📈 Add Income</div>
                     <div class="card-body">
                         <form action="/add-income" method="POST">
                             <div class="row mb-2">
                                 <div class="col">
-                                    <input type="number" step="0.01" name="amount" class="form-control" placeholder="Tutar (TL)" required>
+                                    <input type="number" step="0.01" name="amount" class="form-control" placeholder="Amount ($)" required>
                                 </div>
                                 <div class="col">
                                     <input type="date" name="date" class="form-control" value="<%= new Date().toISOString().split('T')[0] %>" required>
@@ -141,7 +147,7 @@
                             </div>
                             <div class="mb-2">
                                 <select name="category_id" class="form-select">
-                                    <% categories.forEach(cat => { %>
+                                    <% categories.forEach(cat=> { %>
                                         <% if(cat.category_type !== 'EXPENSE') { %>
                                             <option value="<%= cat.category_id %>"><%= cat.category_name %></option>
                                         <% } %>
@@ -149,82 +155,89 @@
                                 </select>
                             </div>
                             <div class="mb-2">
-                                <input type="text" name="description" class="form-control" placeholder="Açıklama (Opsiyonel)">
+                                <input type="text" name="description" class="form-control" placeholder="Description (Optional)">
                             </div>
-                            <button type="submit" class="btn btn-success w-100">Gelir Kaydet</button>
+                            <button type="submit" class="btn btn-success w-100">Save Income</button>
                         </form>
                     </div>
                 </div>
 
-                <h6 class="text-muted">Son Gelirler</h6>
+                <h6 class="text-muted">Recent Income</h6>
                 <ul class="list-group mb-4">
-                    <% incomes.forEach(item => { %>
+                    <% incomes.forEach(item=> { %>
                         <li class="list-group-item d-flex justify-content-between align-items-center">
                             <div>
-                                <strong><%= item.category_name %></strong> <small class="text-muted">(<%= item.description %>)</small>
+                                <strong><%= item.category_name %></strong>
+                                <small class="text-muted">(<%= item.description %>)</small>
                                 <br>
-                                <small class="text-secondary"><%= new Date(item.income_date).toLocaleDateString('tr-TR') %></small>
+                                <small class="text-secondary"><%= new Date(item.income_date).toLocaleDateString('en-US') %></small>
                             </div>
-                            <span class="badge bg-success rounded-pill">+ ₺<%= parseFloat(item.amount).toFixed(2) %></span>
+                            <div class="d-flex align-items-center">
+                                <span class="badge bg-success rounded-pill me-3">+ $<%= parseFloat(item.amount).toFixed(2) %></span>
+                                <div class="btn-group" role="group">
+                                    <a href="/edit-income/<%= item.income_id %>" class="btn btn-sm btn-outline-success">✏️</a>
+                                    <form action="/delete-income/<%= item.income_id %>" method="POST" style="display:inline;">
+                                        <button type="submit" class="btn btn-sm btn-outline-danger" onclick="return confirm('Are you sure you want to delete this income?')">🗑️</button>
+                                    </form>
+                                </div>
+                            </div>
                         </li>
                     <% }) %>
-                    <% if(incomes.length === 0) { %> <li class="list-group-item text-center text-muted">Henüz kayıt yok.</li> <% } %>
+                    <% if(incomes.length===0) { %>
+                        <li class="list-group-item text-center text-muted">No records yet.</li>
+                    <% } %>
                 </ul>
             </div>
-
         </div>
     </div>
 
-<div class="modal fade" id="addCategoryModal" tabindex="-1">
+    <div class="modal fade" id="addCategoryModal" tabindex="-1">
         <div class="modal-dialog">
             <div class="modal-content">
                 <div class="modal-header">
-                    <h5 class="modal-title">Yeni Kategori Oluştur</h5>
+                    <h5 class="modal-title">Create New Category</h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                 </div>
                 <div class="modal-body">
                     <form action="/add-category" method="POST">
                         <div class="mb-3">
-                            <label class="form-label">Kategori Adı</label>
-                            <input type="text" name="category_name" class="form-control" placeholder="Örn: Tatil, Kira, Kedi..." required>
+                            <label class="form-label">Category Name</label>
+                            <input type="text" name="category_name" class="form-control" placeholder="e.g. Vacation, Rent, Cat..." required>
                         </div>
                         <div class="mb-3">
-                            <label class="form-label">Bu kategori ne için?</label>
+                            <label class="form-label">Category Type</label>
                             <select name="category_type" class="form-select">
-                                <option value="EXPENSE">Gider (Harcama)</option>
-                                <option value="INCOME">Gelir (Kazanç)</option>
-                                <option value="BOTH">Her İkisi de</option>
+                                <option value="EXPENSE">Expense</option>
+                                <option value="INCOME">Income</option>
+                                <option value="BOTH">Both</option>
                             </select>
                         </div>
                         <div class="d-grid">
-                            <button type="submit" class="btn btn-primary">Kaydet</button>
+                            <button type="submit" class="btn btn-primary">Save</button>
                         </div>
                     </form>
                 </div>
             </div>
         </div>
     </div>
-    
-<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/chartjs-chart-sankey"></script>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-chart-sankey"></script>
 
     <script>
-        // Server'dan gelen veriyi al
-        const data = <%- JSON.stringify(chartData) %>;
+        const rawData = '<%- (typeof chartData !== "undefined" && chartData) ? JSON.stringify(chartData) : "{}" %>';
+        const data = JSON.parse(rawData);
 
-        // 1. PASTA GRAFİK (Kategoriler)
         const ctxPie = document.getElementById('categoryChart');
         if (ctxPie) {
             new Chart(ctxPie, {
-                type: 'pie', // 'pie' da yapabilirsin
+                type: 'pie',
                 data: {
                     labels: data.pieLabels,
                     datasets: [{
                         data: data.pieValues,
-                        backgroundColor: [
-                            '#FF6384', '#36A2EB', '#FFCE56', '#4BC0C0', '#9966FF', '#FF9F40'
-                        ],
+                        backgroundColor: ['#FF6384', '#36A2EB', '#FFCE56', '#4BC0C0', '#9966FF', '#FF9F40'],
                         hoverOffset: 4
                     }]
                 },
@@ -232,7 +245,6 @@
             });
         }
 
-        // 2. ÇİZGİ GRAFİK (BAKİYE AKIŞI - YEŞİL/KIRMIZI EFEKTLİ)
         const ctxLine = document.getElementById('trendChart');
         if (ctxLine) {
             new Chart(ctxLine, {
@@ -240,21 +252,13 @@
                 data: {
                     labels: data.lineLabels,
                     datasets: [{
-                        label: 'Toplam Bakiye',
+                        label: 'Total Balance',
                         data: data.lineValues,
                         fill: true,
-                        tension: 0.4, // Çizgiyi yumuşatır
-                        // RENK SİHRİ BURADA BAŞLIYOR 👇
+                        tension: 0.4,
                         segment: {
-                            borderColor: ctx => {
-                                // Eğer bir sonraki nokta daha yukarıdaysa (p1 > p0) YEŞİL, değilse KIRMIZI
-                                // (Chart.js'de Y ekseni yukarı doğru artar, p1.parsed.y değeri büyükse yukarıdadır)
-                                return ctx.p0.parsed.y < ctx.p1.parsed.y ? '#198754' : '#dc3545';
-                            },
-                            backgroundColor: ctx => {
-                                // Altındaki alanın rengi de hafifçe değişsin
-                                return ctx.p0.parsed.y < ctx.p1.parsed.y ? 'rgba(25, 135, 84, 0.1)' : 'rgba(220, 53, 69, 0.1)';
-                            }
+                            borderColor: ctx => ctx.p0.parsed.y < ctx.p1.parsed.y ? '#198754' : '#dc3545',
+                            backgroundColor: ctx => ctx.p0.parsed.y < ctx.p1.parsed.y ? 'rgba(25, 135, 84, 0.1)' : 'rgba(220, 53, 69, 0.1)'
                         },
                         pointBackgroundColor: '#fff',
                         pointBorderColor: '#000',
@@ -266,12 +270,10 @@
                     maintainAspectRatio: false,
                     scales: { y: { beginAtZero: true } },
                     plugins: {
-                        legend: { display: false }, // Tek çizgi olduğu için etikete gerek yok
+                        legend: { display: false },
                         tooltip: {
                             callbacks: {
-                                label: function(context) {
-                                    return 'Bakiye: ₺' + context.parsed.y.toFixed(2);
-                                }
+                                label: function (context) { return 'Balance: $' + context.parsed.y.toFixed(2); }
                             }
                         }
                     }
@@ -279,65 +281,47 @@
             });
         }
 
-        // 3. SÜTUN GRAFİK (Gelir vs Gider)
         const ctxBar = document.getElementById('cashflowChart');
         if (ctxBar) {
             new Chart(ctxBar, {
                 type: 'bar',
                 data: {
-                    labels: ['Bu Ay'],
+                    labels: ['This Month'],
                     datasets: [
-                        {
-                            label: 'Gelir',
-                            data: [data.barIncome],
-                            backgroundColor: '#198754'
-                        },
-                        {
-                            label: 'Gider',
-                            data: [data.barExpense],
-                            backgroundColor: '#dc3545'
-                        }
+                        { label: 'Income', data: [data.barIncome], backgroundColor: '#198754' },
+                        { label: 'Expense', data: [data.barExpense], backgroundColor: '#dc3545' }
                     ]
                 },
                 options: { scales: { y: { beginAtZero: true } } }
             });
         }
-        // ... (Mevcut grafik kodlarının altına ekle) ...
 
-        // 4. SANKEY CHART (Para Akışı)
         const ctxSankey = document.getElementById('sankeyChart');
         if (ctxSankey && data.sankey.length > 0) {
             new Chart(ctxSankey, {
                 type: 'sankey',
                 data: {
                     datasets: [{
-                        label: 'Para Akışı',
-                        data: data.sankey, // Server'dan gelen veri
-                        colorFrom: (c) => c.dataset.data[c.dataIndex].to === 'Cüzdan 💰' ? '#198754' : '#6c757d', // Gelirler Yeşil
-                        colorTo: (c) => c.dataset.data[c.dataIndex].from === 'Cüzdan 💰' ? '#dc3545' : '#6c757d', // Giderler Kırmızı
-                        colorMode: 'gradient', // Renk geçişli olsun
-                        size: 'max', // Genişlik ayarı
+                        label: 'Cash Flow',
+                        data: data.sankey,
+                        colorFrom: (c) => c.dataset.data[c.dataIndex].to === 'Wallet 💰' ? '#198754' : '#6c757d',
+                        colorTo: (c) => c.dataset.data[c.dataIndex].from === 'Wallet 💰' ? '#dc3545' : '#6c757d',
+                        colorMode: 'gradient',
+                        size: 'max',
                     }]
                 },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false
-                }
+                options: { responsive: true, maintainAspectRatio: false }
             });
         }
 
-        // GRAFİK DEĞİŞTİRME FONKSİYONU (GÜNCELLENDİ)
         function changeChart() {
             const selected = document.getElementById('chartSelector').value;
-            
-            // Hepsini gizle
             document.getElementById('containerPie').classList.add('d-none');
             document.getElementById('containerLine').classList.add('d-none');
             document.getElementById('containerBar').classList.add('d-none');
-            document.getElementById('containerSankey').classList.add('d-none'); // Yeni
+            document.getElementById('containerSankey').classList.add('d-none');
             document.getElementById('containerPie').classList.remove('d-flex');
 
-            // Seçileni aç
             if (selected === 'pie') {
                 document.getElementById('containerPie').classList.remove('d-none');
                 document.getElementById('containerPie').classList.add('d-flex');
@@ -345,11 +329,10 @@
                 document.getElementById('containerLine').classList.remove('d-none');
             } else if (selected === 'bar') {
                 document.getElementById('containerBar').classList.remove('d-none');
-            } else if (selected === 'sankey') { // Yeni
+            } else if (selected === 'sankey') {
                 document.getElementById('containerSankey').classList.remove('d-none');
             }
         }
     </script>
-    
 </body>
 </html>
