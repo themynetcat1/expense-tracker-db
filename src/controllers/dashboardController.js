@@ -35,14 +35,14 @@ exports.getDashboard = async (req, res) => {
 
     // --- B. CHART DATA ---
 
-    // 1) Pie
+    // 1) Pie - Using VIEW
     const pieQuery = await db.query(`
-      SELECT c.category_name, SUM(e.amount) as total
-      FROM expenses e
-      JOIN categories c ON e.category_id = c.category_id
-      WHERE e.user_id = $1
-      GROUP BY c.category_name
+      SELECT category_name, total_expense AS total
+      FROM user_category_totals
+      WHERE user_id = $1 AND total_expense > 0
+      ORDER BY total_expense DESC
     `, [userId]);
+
 
     // 2) Line (Balance Flow)
     const lineQuery = await db.query(`

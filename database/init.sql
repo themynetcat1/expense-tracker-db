@@ -124,6 +124,38 @@ AFTER INSERT ON incomes
 FOR EACH ROW
 EXECUTE FUNCTION update_summary_trigger();
 
+-- 10. VIEW: User totals by category (income & expense)
+CREATE OR REPLACE VIEW user_category_totals AS
+SELECT
+  t.user_id,
+  t.category_id,
+  t.category_name,
+  COALESCE(SUM(t.total_income), 0)::DECIMAL(10,2)  AS total_income,
+  COALESCE(SUM(t.total_expense), 0)::DECIMAL(10,2) AS total_expense
+FROM (
+  SELECT
+    i.user_id,
+    c.category_id,
+    c.category_name,
+    i.amount::DECIMAL(10,2) AS total_income,
+    0::DECIMAL(10,2)        AS total_expense
+  FROM incomes i
+  JOIN categories c ON c.category_id = i.category_id
+
+  UNION ALL
+
+  SELECT
+    e.user_id,
+    c.category_id,
+    c.category_name,
+    0::DECIMAL(10,2)        AS total_income,
+    e.amount::DECIMAL(10,2) AS total_expense
+  FROM expenses e
+  JOIN categories c ON c.category_id = e.category_id
+) t
+GROUP BY t.user_id, t.category_id, t.category_name;
+
+
 -- 1. ABONELİKLER (SUBSCRIPTIONS)
 CREATE TABLE subscriptions (
     subscription_id SERIAL PRIMARY KEY,
