@@ -4,6 +4,8 @@
   "description": "",
   "main": "index.js",
   "scripts": {
+    "start": "node src/server.js",
+    "dev": "nodemon src/server.js",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "keywords": [],
@@ -17,5 +19,8 @@
     "express": "^5.2.1",
     "express-session": "^1.18.2",
     "pg": "^8.16.3"
+  },
+  "devDependencies": {
+    "nodemon": "^3.1.11"
   }
 }
