@@ -39,55 +39,55 @@ Prerequisites
 
 1) Clone the repository
 
-git clone <https://github.com/themynetcat1/expense-tracker-db.git>
-cd <expense-tracker-db>
+- git clone <https://github.com/themynetcat1/expense-tracker-db.git>
+- cd <expense-tracker-db>
 
 2) Install dependencies
-npm install
+- npm install
 
 3) Configure environment variables
-Copy .env.example to .env and update values if needed:
+- Copy .env.example to .env and update values if needed:
 
-Windows (PowerShell):
-copy .env.example .env
+- Windows (PowerShell):
+- copy .env.example .env
 
-macOS / Linux:
-cp .env.example .env
+- macOS / Linux:
+- cp .env.example .env
 
-Make sure .env includes correct PostgreSQL connection values (DB name, user, password, host, port) and a session secret.
+- Make sure .env includes correct PostgreSQL connection values (DB name, user, password, host, port) and a session secret.
 
 4) Create the database
-If your .env uses DB_NAME=expense_tracker_db, create it like this:
+- If your .env uses DB_NAME=expense_tracker_db, create it like this:
 
-psql -U postgres -c "CREATE DATABASE expense_tracker_db;"
+- psql -U postgres -c "CREATE DATABASE expense_tracker_db;"
 
-If you use a different database name, ensure it matches DB_NAME in .env.
+- If you use a different database name, ensure it matches DB_NAME in .env.
 
 5) Initialize database schema (tables, triggers, procedure, view)
-psql -U postgres -d expense_tracker_db -f database/init.sql
+- psql -U postgres -d expense_tracker_db -f database/init.sql
 
-If you need to specify host/port:
-psql -U postgres -h localhost -p 5432 -d expense_tracker_db -f database/init.sql
+- If you need to specify host/port:
+- psql -U postgres -h localhost -p 5432 -d expense_tracker_db -f database/init.sql
 
 6) Start the application
-npm run start
+- npm run start
 
-If you have a dev script:
-npm run dev
+- If you have a dev script:
+- npm run dev
 
-Open in browser:
-http://localhost:3000
+- Open in browser:
+- http://localhost:3000
 
 ---
 
 ## Notes
-Password hashing migration
-If there are existing users stored with plaintext passwords, the app will automatically hash and update them after the first successful login.
+- Password hashing migration
+- If there are existing users stored with plaintext passwords, the app will automatically hash and update them after the first successful login.
 
 ---
 
 ## DBMS requirements
-Stored procedure: used in the monthly report page
-Triggers: used to update daily summaries
-View: used for category totals (pie chart source)
+- Stored procedure: used in the monthly report page
+- Triggers: used to update daily summaries
+- View: used for category totals (pie chart source)
 

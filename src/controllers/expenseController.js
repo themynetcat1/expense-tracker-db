@@ -6,7 +6,7 @@ exports.addExpense = async (req, res) => {
   try {
     await db.query(
       'INSERT INTO expenses (user_id, category_id, amount, description, expense_date) VALUES ($1, $2, $3, $4, $5)',
-      [req.session.userId, category_id, amount, description, date]
+      [req.user.userId, category_id, amount, description, date]
     );
     return res.redirect('/dashboard');
   } catch (err) {
@@ -21,7 +21,7 @@ exports.deleteExpense = async (req, res) => {
   try {
     await db.query(
       'DELETE FROM expenses WHERE expense_id = $1 AND user_id = $2',
-      [expenseId, req.session.userId]
+      [expenseId, req.user.userId]
     );
     return res.redirect('/dashboard');
   } catch (err) {
@@ -33,7 +33,7 @@ exports.deleteExpense = async (req, res) => {
 exports.getEditExpense = async (req, res) => {
   try {
     const expenseId = req.params.id;
-    const userId = req.session.userId;
+    const userId = req.user.userId;
 
     const result = await db.query(
       'SELECT * FROM expenses WHERE expense_id = $1 AND user_id = $2',
@@ -58,7 +58,7 @@ exports.updateExpense = async (req, res) => {
   } = req.body;
 
   const expenseId = req.params.id;
-  const userId = req.session.userId;
+  const userId = req.user.userId;
 
   try {
     await db.query(

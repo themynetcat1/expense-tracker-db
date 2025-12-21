@@ -1,7 +1,7 @@
 const db = require('../db');
 
 exports.getDashboard = async (req, res) => {
-  const userId = req.session.userId;
+  const userId = req.user.userId;
 
   try {
     // --- A. LISTS AND TABLES ---
@@ -125,7 +125,7 @@ exports.getDashboard = async (req, res) => {
     };
 
     return res.render('dashboard', {
-      username: req.session.username,
+      username: req.user.username,
       categories: categories.rows,
       expenses: expenses.rows,
       incomes: incomes.rows,

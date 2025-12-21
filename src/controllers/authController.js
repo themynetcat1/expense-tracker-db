@@ -2,11 +2,22 @@ const db = require('../db');
 const { validationResult } = require('express-validator');
 const bcrypt = require('bcrypt');
 
-// GET /
+const { signToken, verifyToken } = require('../utils/jwt');
+
+// GET - cookie varsa giriş yapmadan dashboard'a atar
 exports.getHome = (req, res) => {
-  if (req.session.userId) return res.redirect('/dashboard');
-  res.render('index', { error: null });
+  const token = req.cookies?.token;
+  if (token) {
+    try {
+      verifyToken(token);
+      return res.redirect('/dashboard');
+    } catch (e) {
+      res.clearCookie('token');
+    }
+  }
+  return res.render('index', { error: null });
 };
+
 
 
 //Daha önce kayıt olan kullanıcılar için şifreleri bcrypt ile hashlemek üzere kontrol edilir
@@ -32,8 +43,16 @@ exports.register = async (req, res) => {
       [username, email, passwordHash]
     );
 
-    req.session.userId = result.rows[0].user_id;
-    req.session.username = username;
+    //JWT işlemleri
+    const token = signToken({ userId: result.rows[0].user_id, username: username });
+
+    res.cookie('token', token, {
+      httpOnly: true,
+      sameSite: 'lax',
+      secure: process.env.NODE_ENV === 'production',
+      maxAge: 7 * 24 * 60 * 60 * 1000
+    });
+
     return res.redirect('/dashboard');
   } catch (err) {
     console.error("REGISTER ERROR:", err);
@@ -52,7 +71,7 @@ exports.register = async (req, res) => {
   }
 };
 
-// POST /login (auto-migrate old plaintext passwords)
+// POST /login (auto-migrate old plaintext passwords + issue JWT cookie)
 exports.login = async (req, res) => {
   const { username, password } = req.body;
 
@@ -65,34 +84,38 @@ exports.login = async (req, res) => {
 
     const user = result.rows[0];
 
-    // If it's already a bcrypt hash, do normal compare
+    // 1) If it's already a bcrypt hash, do normal compare
     if (looksLikeBcryptHash(user.password_hash)) {
       const ok = await bcrypt.compare(password, user.password_hash);
       if (!ok) {
         return res.render('index', { error: 'Invalid credentials.' });
       }
+    } else {
+      // 2) Legacy plaintext: check and migrate on first successful login
+      const legacyOk = (user.password_hash === password);
+      if (!legacyOk) {
+        return res.render('index', { error: 'Invalid credentials.' });
+      }
 
-      req.session.userId = user.user_id;
-      req.session.username = user.username;
-      return res.redirect('/dashboard');
+      // Migrate: hash and update DB
+      const newHash = await bcrypt.hash(password, 12);
+      await db.query(
+        'UPDATE users SET password_hash = $1 WHERE user_id = $2',
+        [newHash, user.user_id]
+      );
     }
 
-    // Otherwise treat as legacy plaintext and migrate on first successful login
-    const legacyOk = (user.password_hash === password);
+    // 3) Issue JWT cookie
+    const token = signToken({ userId: user.user_id, username: user.username });
 
-    if (!legacyOk) {
-      return res.render('index', { error: 'Invalid credentials.' });
-    }
+    res.cookie('token', token, {
+      httpOnly: true,
+      sameSite: 'lax',
+      secure: process.env.NODE_ENV === 'production',
+      path: '/',
+      maxAge: 7 * 24 * 60 * 60 * 1000
+    });
 
-    // Migrate: hash and update DB
-    const newHash = await bcrypt.hash(password, 12);
-    await db.query(
-      'UPDATE users SET password_hash = $1 WHERE user_id = $2',
-      [newHash, user.user_id]
-    );
-
-    req.session.userId = user.user_id;
-    req.session.username = user.username;
     return res.redirect('/dashboard');
 
   } catch (err) {
@@ -101,9 +124,9 @@ exports.login = async (req, res) => {
   }
 };
 
+
 // GET /logout
 exports.logout = (req, res) => {
-  req.session.destroy(() => {
-    res.redirect('/');
-  });
+  res.clearCookie('token', { path: '/' });
+  return res.redirect('/');
 };

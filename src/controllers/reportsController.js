@@ -1,7 +1,7 @@
 const db = require('../db');
 
 exports.getReports = async (req, res) => {
-  const userId = req.session.userId;
+  const userId = req.user.userId;
 
   const currentYear = new Date().getFullYear();
   const currentMonth = new Date().getMonth() + 1;
@@ -110,7 +110,7 @@ exports.getReports = async (req, res) => {
     };
 
     return res.render('reports', {
-      username: req.session.username,
+      username: req.user.username,
       year: selectedYear,
       month: selectedMonth,
       income: parseFloat(report.p_total_income),
@@ -121,7 +121,7 @@ exports.getReports = async (req, res) => {
   } catch (err) {
     console.error("Report Error:", err);
     return res.render('reports', {
-      username: req.session.username,
+      username: req.user.username,
       year: selectedYear,
       month: selectedMonth,
       income: 0,

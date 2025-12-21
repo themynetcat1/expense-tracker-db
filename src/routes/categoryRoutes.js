@@ -1,9 +1,9 @@
 const express = require('express');
-const requireLogin = require('../middleware/requireLogin');
+const requireAuth = require('../middleware/requireAuth');
 const categoryController = require('../controllers/categoryController');
 
 const router = express.Router();
 
-router.post('/add-category', requireLogin, categoryController.addCategory);
+router.post('/add-category', requireAuth, categoryController.addCategory);
 
 module.exports = router;
