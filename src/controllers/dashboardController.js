@@ -126,6 +126,7 @@ exports.getDashboard = async (req, res) => {
 
     return res.render('dashboard', {
       username: req.user.username,
+      isAdmin: req.user.isAdmin,
       categories: categories.rows,
       expenses: expenses.rows,
       incomes: incomes.rows,

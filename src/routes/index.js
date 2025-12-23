@@ -7,6 +7,7 @@ const reportRoutes = require('./reportRoutes');
 const expenseRoutes = require('./expenseRoutes');
 const incomeRoutes = require('./incomeRoutes');
 const categoryRoutes = require('./categoryRoutes');
+const adminRoutes = require('./adminRoutes');
 
 const router = express.Router();
 
@@ -16,5 +17,6 @@ router.use('/', reportRoutes);
 router.use('/', expenseRoutes);
 router.use('/', incomeRoutes);
 router.use('/', categoryRoutes);
+router.use('/', adminRoutes);
 
 module.exports = router;

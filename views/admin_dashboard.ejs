@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8" />
+    <title>Admin Panel</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+
+    <style>
+        /* Remove extra spacing inside table cells */
+        table td form { margin: 0; }
+    </style>
+</head>
+
+<body class="bg-light">
+<nav class="navbar navbar-dark bg-dark mb-4">
+    <div class="container">
+        <span class="navbar-brand">Admin Panel — <%= username %></span>
+        <div>
+            <a class="btn btn-warning btn-sm me-2" href="/dashboard">Dashboard</a>
+            <a class="btn btn-outline-light btn-sm" href="/logout">Logout</a>
+        </div>
+    </div>
+</nav>
+
+<div class="container">
+    <div class="card">
+        <div class="card-header">Users</div>
+        <div class="card-body">
+
+            <div class="table-responsive">
+                <table class="table table-striped align-middle">
+                    <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>Username</th>
+                        <th>Email</th>
+                        <th>Admin</th>
+                        <th>Actions</th>
+                        <th>Created At</th>
+                        <th>Active</th>
+                    </tr>
+                    </thead>
+
+                    <tbody>
+                    <% users.forEach(u => { %>
+                        <tr>
+                            <td><%= u.user_id %></td>
+
+                            <td>
+                                <a href="/admin/users/<%= u.user_id %>"><%= u.username %></a>
+                            </td>
+
+                            <td><%= u.email %></td>
+
+                            <td><%= u.is_admin ? 'Yes' : 'No' %></td>
+
+                            <!-- FIX 1: No extra white space under buttons -->
+                            <td>
+                                <div class="d-flex gap-2">
+                                    <form method="POST" action="/admin/users/<%= u.user_id %>/toggle-admin">
+                                        <button class="btn btn-sm btn-secondary" type="submit">Toggle Admin</button>
+                                    </form>
+
+                                    <form method="POST"
+                                          action="/admin/users/<%= u.user_id %>/delete"
+                                          onsubmit="return confirm('Delete user?');">
+                                        <button class="btn btn-sm btn-danger" type="submit">Delete</button>
+                                    </form>
+                                </div>
+                            </td>
+
+                            <td>
+                                <%= new Date(u.created_at).toLocaleString() %>
+                            </td>
+
+                            <!-- FIX 2: Correct active/disabled label based on is_active -->
+                            <td>
+                                <div class="d-flex flex-column gap-2">
+                                    <div><%= u.is_active ? 'Active' : 'Disabled' %></div>
+
+                                    <form method="POST" action="/admin/users/<%= u.user_id %>/toggle-active">
+                                        <button class="btn btn-sm btn-warning" type="submit">
+                                            <%= u.is_active ? 'Disable' : 'Enable' %>
+                                        </button>
+                                    </form>
+                                </div>
+                            </td>
+                        </tr>
+                    <% }) %>
+                    </tbody>
+                </table>
+            </div>
+
+        </div>
+    </div>
+</div>
+</body>
+</html>

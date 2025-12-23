@@ -44,14 +44,16 @@ exports.register = async (req, res) => {
     );
 
     //JWT işlemleri
-    const token = signToken({ userId: result.rows[0].user_id, username: username });
+    const token = signToken({ userId: result.rows[0].user_id, username, isAdmin: false });
 
     res.cookie('token', token, {
       httpOnly: true,
       sameSite: 'lax',
       secure: process.env.NODE_ENV === 'production',
+      path: '/',
       maxAge: 7 * 24 * 60 * 60 * 1000
     });
+
 
     return res.redirect('/dashboard');
   } catch (err) {
@@ -84,6 +86,10 @@ exports.login = async (req, res) => {
 
     const user = result.rows[0];
 
+    if (user.is_active === false) {
+      return res.render('index', { error: 'Your account has been disabled. Please contact admin.' });
+    }
+
     // 1) If it's already a bcrypt hash, do normal compare
     if (looksLikeBcryptHash(user.password_hash)) {
       const ok = await bcrypt.compare(password, user.password_hash);
@@ -106,7 +112,7 @@ exports.login = async (req, res) => {
     }
 
     // 3) Issue JWT cookie
-    const token = signToken({ userId: user.user_id, username: user.username });
+    const token = signToken({userId: user.user_id, username: user.username, isAdmin: user.is_admin === true });
 
     res.cookie('token', token, {
       httpOnly: true,

@@ -19,6 +19,12 @@
                 <button type="button" class="btn btn-primary btn-sm me-2" data-bs-toggle="modal" data-bs-target="#addCategoryModal">
                     ➕ Add Category
                 </button>
+
+                <% if (isAdmin) { %>
+                    <a href="/admin" class="btn btn-danger btn-sm me-2">🛠 Admin</a>
+                <% } %>
+
+
                 <a href="/reports" class="btn btn-warning btn-sm me-2">📊 Reports</a>
                 <a href="/logout" class="btn btn-outline-light btn-sm">Logout</a>
             </div>

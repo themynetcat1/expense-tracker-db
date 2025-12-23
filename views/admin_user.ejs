@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8" />
+    <title>User Details</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+</head>
+<body class="bg-light">
+<div class="container mt-4">
+    <a class="btn btn-secondary btn-sm mb-3" href="/admin">← Back</a>
+
+    <div class="card mb-3">
+        <div class="card-header">User</div>
+        <div class="card-body">
+            <p><strong>ID:</strong> <%= targetUser.user_id %></p>
+            <p><strong>Username:</strong> <%= targetUser.username %></p>
+            <p><strong>Email:</strong> <%= targetUser.email %></p>
+            <p><strong>Admin:</strong> <%= targetUser.is_admin ? 'Yes' : 'No' %></p>
+        </div>
+    </div>
+
+    <div class="row g-3">
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header">Latest Expenses (20)</div>
+                <div class="card-body">
+                    <ul class="list-group">
+                        <% expenses.forEach(e => { %>
+                            <li class="list-group-item d-flex justify-content-between">
+                                <span><%= e.expense_date %> — <%= e.category_name %> — <%= e.description %></span>
+                                <strong><%= e.amount %></strong>
+                            </li>
+                        <% }) %>
+                        <% if (expenses.length === 0) { %>
+                            <li class="list-group-item">No expenses.</li>
+                        <% } %>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header">Latest Incomes (20)</div>
+                <div class="card-body">
+                    <ul class="list-group">
+                        <% incomes.forEach(i => { %>
+                            <li class="list-group-item d-flex justify-content-between">
+                                <span><%= i.income_date %> — <%= i.category_name %> — <%= i.description %></span>
+                                <strong><%= i.amount %></strong>
+                            </li>
+                        <% }) %>
+                        <% if (incomes.length === 0) { %>
+                            <li class="list-group-item">No incomes.</li>
+                        <% } %>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+
+</div>
+</body>
+</html>
