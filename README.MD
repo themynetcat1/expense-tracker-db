@@ -1,3 +1,4 @@
+# Expense Tracker (DBMS Project)
 
 A personal expense tracking system built with Node.js, Express, and PostgreSQL. This project serves as a comprehensive web application for managing personal finances and demonstrates advanced database features like stored procedures, triggers, and views.
 
